@@ -6,7 +6,7 @@ import { getCsrfToken, signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { CSSProperties } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { FaGoogle } from "react-icons/fa";
 import { z } from "zod";
@@ -17,6 +17,7 @@ import { getServerSession } from "@calcom/features/auth/lib/getServerSession";
 import { isSAMLLoginEnabled, samlProductID, samlTenantID } from "@calcom/features/ee/sso/lib/saml";
 import { WEBAPP_URL, WEBSITE_URL } from "@calcom/lib/constants";
 import { getSafeRedirectUrl } from "@calcom/lib/getSafeRedirectUrl";
+import { useCallbackRef } from "@calcom/lib/hooks/useCallbackRef";
 import { useLocale } from "@calcom/lib/hooks/useLocale";
 import { collectPageParameters, telemetryEventTypes, useTelemetry } from "@calcom/lib/telemetry";
 import prisma from "@calcom/prisma";
@@ -135,6 +136,26 @@ export default function Login({
     // fallback if error not found
     else setErrorMessage(errorMessages[res.error] || t("something_went_wrong"));
   };
+
+  const onSubmitRef = useCallbackRef(onSubmit);
+
+  const totpCode = methods.watch("totpCode");
+
+  // auto submit 2FA if all inputs have a value
+  useEffect(() => {
+    if (totpCode?.trim().length === 6) {
+      methods.handleSubmit(onSubmitRef.current)();
+    }
+  }, [methods, onSubmitRef, totpCode]);
+
+  const backupCode = methods.watch("backupCode");
+
+  // auto submit backup code
+  useEffect(() => {
+    if (backupCode?.trim().length === 11) {
+      methods.handleSubmit(onSubmitRef.current)();
+    }
+  }, [methods, onSubmitRef, backupCode]);
 
   return (
     <div
